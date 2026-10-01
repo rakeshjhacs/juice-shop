@@ -68,6 +68,6 @@ jobs:
 
       # 5. UPLOAD RESULTS TO GITHUB SECURITY TAB
       - name: Upload Cleaned Scan Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
