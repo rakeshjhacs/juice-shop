@@ -47,12 +47,12 @@ jobs:
 
       # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
       # Audits repo settings, branch protections, and compliance benchmarks
+      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler CLI)
       - name: Run Prowler Security Assessment
-        uses: prowler-cloud/prowler-action@main
         continue-on-error: true
-        with:
-          provider: github
-          severities: critical,high
+        run: |
+          pip install prowler
+          prowler github --fixed-severity high,critical
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
