@@ -45,28 +45,26 @@ jobs:
           output_format: sarif
           output_file_path: checkov-results.sarif
 
-      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler CLI)
+      # 4. UPLOAD CHECKOV RESULTS TO GITHUB SECURITY TAB
+      - name: Upload Checkov Scan Results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: checkov-results.sarif
+
+      # 5. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler CLI)
       - name: Run Prowler Security Assessment
         continue-on-error: true
         run: |
           pip install prowler
-          prowler github --fixed-severity high,critical -M json,sarif -o prowlet-out || true
-          
-          mkdir -p prowler-results
-          find prowlet-out -name "*.sarif" -exec cp {} prowler-results/prowler.sarif \;
+          prowler github --fixed-severity high,critical || true
 
-      - name: Upload Prowler Results to GitHub Security Tab
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: prowler-results/prowler.sarif
-
-      # 5. BUILD DOCKER CONTAINER IMAGE
+      # 6. BUILD DOCKER CONTAINER IMAGE
       - name: Build Local Docker Image
         continue-on-error: true
         run: |
           docker build -t juice-shop-local:latest .
 
-      # 6. CONTAINER IMAGE SECURITY (Trivy)
+      # 7. CONTAINER IMAGE SECURITY (Trivy)
       - name: Run Trivy Container Image Scanner
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
@@ -76,7 +74,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # 7. UPLOAD TRIVY RESULTS TO GITHUB SECURITY TAB
+      # 8. UPLOAD TRIVY RESULTS TO GITHUB SECURITY TAB
       - name: Upload Trivy Scan Results
         uses: github/codeql-action/upload-sarif@v4
         with:
