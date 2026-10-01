@@ -45,23 +45,20 @@ jobs:
           output_format: sarif
           output_file_path: checkov-results.sarif
 
-      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
-      # Audits repo settings, branch protections, and compliance benchmarks
       # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler CLI)
-     # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
       - name: Run Prowler Security Assessment
         continue-on-error: true
         run: |
           pip install prowler
-          prowler github --fixed-severity high,critical -M sarif -o prowler-results || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prowler github --fixed-severity high,critical -M json,sarif -o prowlet-out || true
+          
+          mkdir -p prowler-results
+          find prowlet-out -name "*.sarif" -exec cp {} prowler-results/prowler.sarif \;
 
       - name: Upload Prowler Results to GitHub Security Tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: prowler-results/prowler-output.sarif
-        
+          sarif_file: prowler-results/prowler.sarif
 
       # 5. BUILD DOCKER CONTAINER IMAGE
       - name: Build Local Docker Image
@@ -79,8 +76,8 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # 7. UPLOAD RESULTS TO GITHUB SECURITY TAB
-      - name: Upload Scan Results
-        uses: github/codeql-action/upload-sarif@v3
+      # 7. UPLOAD TRIVY RESULTS TO GITHUB SECURITY TAB
+      - name: Upload Trivy Scan Results
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
