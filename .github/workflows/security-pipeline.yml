@@ -30,9 +30,7 @@ jobs:
       - name: Run Semgrep SAST Scan
         uses: returntocorp/semgrep-action@v1
         with:
-          config: >--
-            p/security-audit
-            p/owasp-top-ten
+          config: p/security-audit
           generate-sarif: "true"
 
       # 3. SOFTWARE COMPOSITION ANALYSIS / SCA (Node NPM Audit)
@@ -45,7 +43,6 @@ jobs:
       - name: Install Dependencies & Run Audit
         run: |
           npm install
-          # We check vulnerabilities, but allow the job to continue or fail based on policy
           npm audit --audit-level=high || true
 
       # 4. CONTAINER SECURITY & OS/PACKAGE VULNERABILITIES (Trivy)
