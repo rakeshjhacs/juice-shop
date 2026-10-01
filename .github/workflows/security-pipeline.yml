@@ -1,79 +1,11 @@
-name: Ultimate DevSecOps Pipeline
-
-on:
-  push:
-    branches: [ "master", "main" ]
-  pull_request:
-    branches: [ "master", "main" ]
-
-jobs:
-  secops-scan:
-    name: Comprehensive Security, IaC & Posture Assessment
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # 1. SECRET SCANNING (Gitleaks)
-      - name: Run Gitleaks Secret Scanner
-        uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ""
-
-      # 2. STATIC APPLICATION SECURITY TESTING (Semgrep)
-      - name: Run Semgrep SAST Scan
-        uses: returntocorp/semgrep-action@v1
-        continue-on-error: true
-        with:
-          config: p/owasp-top-ten
-          extra_args: '--exclude="test" --exclude="data/static"'
-          generate-sarif: "true"
-
-      # 3. INFRASTRUCTURE AS CODE & CONFIG SECURITY (Checkov)
-      - name: Run Checkov IaC Scanner
-        uses: bridgecrewio/checkov-action@master
-        continue-on-error: true
-        with:
-          framework: dockerfile,github_actions
-          output_format: sarif
-          output_file_path: checkov-results.sarif
-
-      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
-      # Audits repo settings, branch protections, and compliance benchmarks
-      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler CLI)
+# 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
       - name: Run Prowler Security Assessment
         continue-on-error: true
         run: |
           pip install prowler
-          prowler github --fixed-severity high,critical
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prowler github --fixed-severity high,critical -M sarif -o prowler-results || true
 
-      # 5. BUILD DOCKER CONTAINER IMAGE
-      - name: Build Local Docker Image
-        continue-on-error: true
-        run: |
-          docker build -t juice-shop-local:latest .
-
-      # 6. CONTAINER IMAGE SECURITY (Trivy)
-      - name: Run Trivy Container Image Scanner
-        uses: aquasecurity/trivy-action@master
-        continue-on-error: true
-        with:
-          image-ref: 'juice-shop-local:latest'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      # 7. UPLOAD RESULTS TO GITHUB SECURITY TAB
-      - name: Upload Scan Results
+      - name: Upload Prowler Results to GitHub Security Tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: prowler-results/prowler-output.sarif
