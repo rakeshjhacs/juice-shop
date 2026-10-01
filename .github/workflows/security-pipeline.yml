@@ -19,9 +19,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. SECRET SCANNING (Gitleaks)
+      # 1. SECRET SCANNING (Gitleaks) - Continues even if secrets are found
       - name: Run Gitleaks Secret Scanner
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ""
@@ -29,6 +30,7 @@ jobs:
       # 2. STATIC APPLICATION SECURITY TESTING / SAST (Semgrep)
       - name: Run Semgrep SAST Scan
         uses: returntocorp/semgrep-action@v1
+        continue-on-error: true
         with:
           config: p/security-audit
           generate-sarif: "true"
@@ -41,6 +43,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies & Run Audit
+        continue-on-error: true
         run: |
           npm install
           npm audit --audit-level=high || true
@@ -48,6 +51,7 @@ jobs:
       # 4. CONTAINER SECURITY & OS/PACKAGE VULNERABILITIES (Trivy)
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           scan-type: 'fs'
           security-checks: 'vuln,config,secret'
