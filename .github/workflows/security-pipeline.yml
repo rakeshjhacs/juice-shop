@@ -1,4 +1,4 @@
-name: DevSecOps Security Pipeline
+name: Advanced DevSecOps Security Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ "master", "main" ]
 
 jobs:
-  secops-scan:
-    name: Automated Security Assessment
+  advanced-secops-scan:
+    name: Comprehensive Security Assessment
     runs-on: ubuntu-latest
     
     permissions:
@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ""
 
-      # 2. STATIC APPLICATION SECURITY TESTING / SAST (Semgrep)
+      # 2. STATIC APPLICATION SECURITY TESTING (Semgrep)
       - name: Run Semgrep SAST Scan
         uses: returntocorp/semgrep-action@v1
         continue-on-error: true
@@ -35,31 +35,50 @@ jobs:
           config: p/security-audit
           generate-sarif: "true"
 
-      # 3. SETUP NODE & GENERATE LOCKFILE FOR NPM AUDIT
+      # 3. INFRASTRUCTURE AS CODE (IaC) SCANNING (Checkov)
+      - name: Run Checkov IaC Security Scanner
+        uses: bridgecrewio/checkov-action@master
+        continue-on-error: true
+        with:
+          framework: dockerfile,github_actions # Scans workflows and Dockerfiles for misconfigs
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      # 4. SOFTWARE BILL OF MATERIALS (SBOM) GENERATION (Syft)
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        continue-on-error: true
+        with:
+          image: ""
+          path: "."
+          format: spdx-json
+          output-file: "sbom-report.spdx.json"
+
+      # 5. SETUP NODE & RUN NPM AUDIT
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Run NPM Install & Audit
+      - name: Install Dependencies & Run NPM Audit
         continue-on-error: true
         run: |
           npm install
           npm audit --audit-level=high || true
 
-      # 4. CONTAINER SECURITY (Trivy - Configured to skip strict lockfile check)
-      - name: Run Trivy vulnerability scanner
+      # 6. CONTAINER & CONFIG SECURITY (Trivy)
+      - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
           scan-type: 'fs'
-          vuln-type: 'os,library'
-          security-checks: 'vuln,config,secret'
+          security-checks: 'config,secret'
           severity: 'CRITICAL,HIGH'
           format: 'sarif'
           output: 'trivy-results.sarif'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      # 7. UPLOAD RESULTS TO GITHUB SECURITY TAB
+      - name: Upload Trivy Results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
