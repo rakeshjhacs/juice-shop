@@ -13,7 +13,7 @@ jobs:
     
     permissions:
       contents: read
-      security-events: write # Required for uploading SARIF files to GitHub Security tab
+      security-events: write
 
     steps:
       - name: Checkout Code
@@ -35,7 +35,7 @@ jobs:
           config: p/security-audit
           generate-sarif: "true"
 
-      # 3. SETUP NODE & INSTALL DEPENDENCIES FIRST (Generates lock file)
+      # 3. SETUP NODE & GENERATE LOCKFILE FOR NPM AUDIT
       - name: Set up Node.js & Install Dependencies
         uses: actions/setup-node@v4
         with:
@@ -48,14 +48,14 @@ jobs:
           npm install
           npm audit --audit-level=high || true
 
-      # 4. CONTAINER SECURITY & OS/PACKAGE VULNERABILITIES (Trivy)
-      - name: Run Trivy vulnerability scanner in repo mode
+      # 4. CONTAINER SECURITY (Trivy - Configured to skip strict lockfile check)
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
           scan-type: 'fs'
+          vuln-type: 'os,library'
           security-checks: 'vuln,config,secret'
-          skip-dirs: 'node_modules'
           severity: 'CRITICAL,HIGH'
           format: 'sarif'
           output: 'trivy-results.sarif'
