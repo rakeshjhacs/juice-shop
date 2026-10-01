@@ -1,4 +1,4 @@
-name: Fine-Tuned DevSecOps Pipeline
+name: Ultimate DevSecOps Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ "master", "main" ]
 
 jobs:
-  fine-tuned-scan:
-    name: Production-Ready Security Assessment
+  secops-scan:
+    name: Comprehensive Security, IaC & Posture Assessment
     runs-on: ubuntu-latest
     
     permissions:
@@ -20,54 +20,60 @@ jobs:
         uses: actions/checkout@v4
 
       # 1. SECRET SCANNING (Gitleaks)
-      # Excludes test/mock directories where dummy secrets usually live
       - name: Run Gitleaks Secret Scanner
         uses: gitleaks/gitleaks-action@v2
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ""
-        with:
-          args: --redact --config-path=.gitleaks.toml || true
 
       # 2. STATIC APPLICATION SECURITY TESTING (Semgrep)
-      # Tuned to ignore test files and focus only on high-confidence security rules
       - name: Run Semgrep SAST Scan
         uses: returntocorp/semgrep-action@v1
         continue-on-error: true
         with:
           config: p/owasp-top-ten
-          extra_args: '--exclude="test" --exclude="data/static" --exclude="vagrant"'
+          extra_args: '--exclude="test" --exclude="data/static"'
           generate-sarif: "true"
 
-      # 3. SETUP NODE & TARGETED DEPENDENCY AUDIT
-      # Only fail the audit step if a CRITICAL vulnerability is found in production dependencies
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      # 3. INFRASTRUCTURE AS CODE & CONFIG SECURITY (Checkov)
+      - name: Run Checkov IaC Scanner
+        uses: bridgecrewio/checkov-action@master
+        continue-on-error: true
         with:
-          node-version: 18
+          framework: dockerfile,github_actions
+          output_format: sarif
+          output_file_path: checkov-results.sarif
 
-      - name: Install Dependencies & Run Targeted NPM Audit
+      # 4. REPOSITORY SECURITY POSTURE & COMPLIANCE (Prowler)
+      # Audits repo settings, branch protections, and compliance benchmarks
+      - name: Run Prowler Security Assessment
+        uses: prowler-cloud/prowler-action@main
+        continue-on-error: true
+        with:
+          provider: github
+          severities: critical,high
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. BUILD DOCKER CONTAINER IMAGE
+      - name: Build Local Docker Image
         continue-on-error: true
         run: |
-          npm install --production
-          npm audit --audit-level=critical || true
+          docker build -t juice-shop-local:latest .
 
-      # 4. CONTAINER & CONFIG SECURITY (Trivy)
-      # Tuned to skip test folders and report ONLY CRITICAL configurations/secrets
-      - name: Run Trivy Vulnerability Scanner
+      # 6. CONTAINER IMAGE SECURITY (Trivy)
+      - name: Run Trivy Container Image Scanner
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          scan-type: 'fs'
-          security-checks: 'config,secret'
-          skip-dirs: 'test,node_modules,data/static,vagrant'
-          severity: 'CRITICAL'
+          image-ref: 'juice-shop-local:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
 
-      # 5. UPLOAD RESULTS TO GITHUB SECURITY TAB
-      - name: Upload Cleaned Scan Results
+      # 7. UPLOAD RESULTS TO GITHUB SECURITY TAB
+      - name: Upload Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
