@@ -1,0 +1,33 @@
+name: Semgrep SAST Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1' # Runs weekly on Mondays at midnight
+
+jobs:
+  semgrep:
+    name: Scan Code
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write # Required if uploading SARIF results to GitHub Security tab
+
+    container:
+      image: semgrep/semgrep:latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Scan
+        run: semgrep ci
+        env:
+          # Optional: If you use Semgrep Cloud Platform (free tier) for dashboard tracking, 
+          # add your token to GitHub Secrets. Omit or leave blank if running completely local/disconnected.
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
