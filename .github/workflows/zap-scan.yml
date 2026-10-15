@@ -32,7 +32,7 @@ jobs:
           echo "Juice Shop is up and running!"
 
       - name: Run OWASP ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.12.0 # You can use action-baseline for faster passive scans
+        uses: zaproxy/action-full-scan@v0.13.0 # You can use action-baseline for faster passive scans
         with:
           target: 'http://localhost:3000'
           rules_file_name: '' # Optional: custom ZAP rules configuration
